@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFHM Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .smooth-transition { transition: all 0.3s ease; }
+        #memberModal { transition: transform 0.3s ease, opacity 0.3s ease; }
+        #memberModal.hidden { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        #memberModal:not(.hidden) { opacity: 1; transform: translateY(0) scale(1); }
+    </style>
+</head>
+<body>
+    <div id="mainApp" class="bg-gray-50 min-h-screen">
+        <div class="max-w-7xl mx-auto p-6">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8 rounded-lg shadow-lg mb-8">
+                <div class="flex justify-between items-center gap-4">
+                    <h1 class="text-3xl font-bold">CFHM Management System</h1>
+                    <div class="flex gap-4">
+                        <button onclick="openUserProfile()" class="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg font-semibold">My Profile</button>
+                        <button onclick="logout()" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg font-semibold">Logout</button>
+                    </div>
+                </div>
+                <p class="text-lg font-semibold mt-2" id="loggedInUser">Welcome</p>
+            </div>
+
+            <div class="mb-8">
+                <button onclick="openAddMemberModal()" class="member-management-control px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600">+ Add New Member</button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Members List</h2>
+                <table id="membersTable" class="w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-6 py-3 text-left text-sm font-semibold">ID</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Location</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Contact</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Monthly Dues</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Dues Paid</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Status</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="membersBody"></tbody>
+                </table>
+                <p id="noMembers" class="text-center py-8 text-gray-500">No members found. Add a member to get started!</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-blue-500 text-white p-6 rounded-lg"><h3 class="text-sm font-semibold mb-2">Total Members</h3><p class="text-3xl font-bold" id="totalMembers">0</p></div>
+                <div class="bg-yellow-500 text-white p-6 rounded-lg"><h3 class="text-sm font-semibold mb-2">Dues Pending</h3><p class="text-3xl font-bold" id="pendingDues">0</p></div>
+                <div class="bg-red-500 text-white p-6 rounded-lg">
+                    <h3 class="text-sm font-semibold mb-2">Total Dues Owed</h3>
+                    <p class="text-3xl font-bold" id="totalDuesOwed">GHS0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" style="position:fixed; top:20px; right:20px; z-index:2000; display:none; padding:12px 18px; border-radius:8px; color:#fff; box-shadow:0 8px 18px rgba(0,0,0,0.2); opacity:0; transition:opacity 0.3s ease;"></div>
+
+    <div id="memberModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6" id="memberModalTitle">Add New Member</h3>
+            <form id="memberForm" class="space-y-4">
+                <input type="text" id="name" placeholder="Name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="text" id="location" placeholder="Location" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="tel" id="contact" placeholder="Contact" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="number" id="attendance" min="0" placeholder="Attendance (days)" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <select id="duesStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Overdue">Overdue</option>
+                </select>
+                <input type="number" id="duesAmount" min="0" step="0.01" placeholder="Monthly Dues (GHS)" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold">Save Member</button>
+                    <button type="button" onclick="closeMemberModal()" class="flex-1 px-6 py-2 bg-gray-400 text-white rounded-lg font-semibold">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="userProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">User Profile</h3>
+            <form id="userProfileForm" class="space-y-4">
+                <input type="text" id="profileUsername" placeholder="Username" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                <input type="text" id="profileFullName" placeholder="Full Name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="email" id="profileEmail" placeholder="Email" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="tel" id="profilePhone" placeholder="Phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <textarea id="profileAddress" placeholder="Address" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold">Save</button>
+                    <button type="button" onclick="closeUserProfile()" class="flex-1 px-6 py-2 bg-gray-400 text-white rounded-lg font-semibold">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="duesModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-2xl w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Dues Payment History - <span id="duesMemberName"></span></h3>
+            <div class="mb-6">
+                <select id="duesYearSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="">Choose a year...</option>
+                </select>
+            </div>
+            <div id="duesPaymentGrid" class="grid grid-cols-6 gap-2 mb-6"></div>
+            <div class="flex gap-4">
+                <button type="button" onclick="saveDuesPayments()" class="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg font-semibold">Save</button>
+                <button type="button" onclick="closeDuesModal()" class="flex-1 px-6 py-2 bg-gray-400 text-white rounded-lg font-semibold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="memberDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-lg w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">Member Details</h3>
+                <button type="button" onclick="closeMemberDetailsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+            <div id="memberDetailsContent" class="space-y-3 text-gray-700"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="hidden bg-gray-50 min-h-screen">
+        <div class="max-w-7xl mx-auto p-6">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8 rounded-lg shadow-lg mb-8">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-4xl font-bold mb-2">CFHM Management System</h1>
+                        <p class="text-blue-100">Track Members: Profile & Dues</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <p class="text-sm text-blue-100">Logged in as</p>
+                            <p class="text-lg font-semibold" id="loggedInUser">User</p>
+                        </div>
+                        <button onclick="openUserProfile()" class="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg font-semibold smooth-transition">My Profile</button>
+                        <button onclick="openUserCreation()" class="user-management-control px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg font-semibold smooth-transition">Create User</button>
+                        <button onclick="downloadLogs()" class="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg font-semibold smooth-transition">Download Logs</button>
+                        <button onclick="logout()" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg font-semibold smooth-transition">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add New Member Button -->
+            <div class="mb-8">
+                <button onclick="openAddMemberModal()" class="member-management-control px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg font-bold hover:from-green-600 hover:to-blue-700 smooth-transition shadow-lg text-lg">+ Add New Member</button>
+            </div>
+
+            <!-- Search & Filter Section -->
+            <div class="bg-white rounded-lg shadow-md p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b-2 border-blue-600">Search & Filter</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <input type="text" id="searchInput" placeholder="Search by name or location..." class="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                    <select id="filterStatus" class="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                        <option value="">All Dues Status</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Overdue">Overdue</option>
+                    </select>
+                    <button onclick="applyFilters()" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 smooth-transition">Apply Filters</button>
+                    <button onclick="resetFilters()" class="px-6 py-2.5 bg-gray-400 text-white rounded-lg font-semibold hover:bg-gray-500 smooth-transition">Reset</button>
+                </div>
+            </div>
+
+            <!-- Members Table -->
+            <div class="bg-white rounded-lg shadow-md p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b-2 border-blue-600">Members List</h2>
+                <div class="overflow-x-auto">
+                    <table id="membersTable" class="w-full">
+                        <thead>
+                            <tr class="bg-gray-100 border-b-2 border-gray-400">
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Location</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Contact</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Monthly Dues</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Attendance</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Dues Paid</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersBody">
+                            <!-- Members will be populated here -->
+                        </tbody>
+                    </table>
+                    <p id="noMembers" class="text-center py-8 text-gray-500 italic">No members found. Add a member to get started!</p>
+                </div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-sm font-semibold text-blue-100 mb-2">Total Members</h3>
+                    <p class="text-3xl font-bold" id="totalMembers">0</p>
+                </div>
+                <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-sm font-semibold text-yellow-100 mb-2">Dues Pending</h3>
+                    <p class="text-3xl font-bold" id="pendingDues">0</p>
+                </div>
+        
+                </div>
+                <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-sm font-semibold text-red-100 mb-2">Total Dues Owed</h3>
+                    <p class="text-3xl font-bold" id="totalDuesOwed">GHS0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast messages -->
+    <div id="toast" style="position:fixed; top:20px; right:20px; z-index:2000; display:none; padding:12px 18px; border-radius:8px; color:#fff; box-shadow:0 8px 18px rgba(2,6,23,0.2); opacity:0; transition:opacity 0.3s ease;"></div>
+
+    <!-- Add/Edit Member Modal -->
+    <div id="memberModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800" id="memberModalTitle">Add New Member</h3>
+                <button class="text-2xl text-gray-600 hover:text-gray-800" onclick="closeMemberModal()">&times;</button>
+            </div>
+            <form id="memberForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+                        <input type="text" id="name" placeholder="Member name" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                    <div>
+                        <label for="location" class="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+                        <input type="text" id="location" placeholder="Location" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                    <div>
+                        <label for="contact" class="block text-sm font-semibold text-gray-700 mb-2">Contact</label>
+                        <input type="tel" id="contact" placeholder="Phone number" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                    <div>
+                        <label for="attendance" class="block text-sm font-semibold text-gray-700 mb-2">Attendance (days)</label>
+                        <input type="number" id="attendance" min="0" placeholder="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                    <div>
+                        <label for="duesStatus" class="block text-sm font-semibold text-gray-700 mb-2">Dues Status</label>
+                        <select id="duesStatus" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Overdue">Overdue</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="duesAmount" class="block text-sm font-semibold text-gray-700 mb-2">Monthly Dues Amount (GHS)</label>
+                        <input type="number" id="duesAmount" min="0" step="0.01" placeholder="10.00" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                </div>
+                <div class="flex gap-4 pt-6">
+                    <button type="submit" class="flex-1 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 smooth-transition shadow-md">Save Member</button>
+                    <button type="reset" class="flex-1 px-6 py-2.5 bg-gray-400 text-white rounded-lg font-semibold hover:bg-gray-500 smooth-transition shadow-md">Clear</button>
+                    <button type="button" onclick="closeMemberModal()" class="flex-1 px-6 py-2.5 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 smooth-transition shadow-md">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Edit/Delete Confirmation -->
+    <div id="actionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-96">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Confirm Action</h3>
+            <p id="modalMessage" class="text-gray-600 mb-6"></p>
+            <div class="flex gap-4">
+                <button class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 smooth-transition" id="confirmBtn">Confirm</button>
+                <button class="flex-1 px-4 py-2 bg-gray-400 text-white rounded-lg font-semibold hover:bg-gray-500 smooth-transition" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div id="userProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-2xl w-full mx-4">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800">User Profile</h3>
+                <button class="text-2xl text-gray-600 hover:text-gray-800" onclick="closeUserProfile()">&times;</button>
+            </div>
+            <form id="userProfileForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="profileUsername" class="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                        <input type="text" id="profileUsername" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" readonly>
+                    </div>
+                    <div>
+                        <label for="profileFullName" class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                        <input type="text" id="profileFullName" placeholder="Enter your full name" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="profileEmail" class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                        <input type="email" id="profileEmail" placeholder="Enter your email" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                    <div>
+                        <label for="profilePhone" class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+                        <input type="tel" id="profilePhone" placeholder="Enter your phone number" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="profileRole" class="block text-sm font-semibold text-gray-700 mb-2">Role</label>
+                        <input type="text" id="profileRole" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" readonly>
+                    </div>
+                    <div>
+                        <label for="profileJoinDate" class="block text-sm font-semibold text-gray-700 mb-2">Member Since</label>
+                        <input type="text" id="profileJoinDate" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" readonly>
+                    </div>
+                </div>
+                <div>
+                    <label for="profileAddress" class="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                    <textarea id="profileAddress" placeholder="Enter your address" rows="3" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 smooth-transition">Save Changes</button>
+                    <button type="button" class="flex-1 px-6 py-2.5 bg-gray-400 text-white rounded-lg font-semibold hover:bg-gray-500 smooth-transition" onclick="closeUserProfile()">Cancel</button>
+                    <button type="button" class="flex-1 px-6 py-2.5 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 smooth-transition" onclick="changePassword()">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800">Change Password</h3>
+                <button class="text-2xl text-gray-600 hover:text-gray-800" onclick="closeChangePassword()">&times;</button>
+            </div>
+            <form id="changePasswordForm" class="space-y-6">
+                <div>
+                    <label for="currentPassword" class="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
+                    <input type="password" id="currentPassword" placeholder="Enter current password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                </div>
+                <div>
+                    <label for="newPassword" class="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+                    <input type="password" id="newPassword" placeholder="Enter new password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                </div>
+                <div>
+                    <label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" placeholder="Confirm new password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200" required>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 smooth-transition">Update Password</button>
+                    <button type="button" class="flex-1 px-6 py-2.5 bg-gray-400 text-white rounded-lg font-semibold hover:bg-gray-500 smooth-transition" onclick="closeChangePassword()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dues Payment History Modal -->
+    <div id="duesModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-4xl w-full mx-4 my-8">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800">Dues Payment History - <span id="duesMemberName"></span></h3>
+                <button class="text-2xl text-gray-600 hover:text-gray-800" onclick="closeDuesModal()">&times;</button>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">Select Year</label>
+                <select id="duesYearSelect" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                    <option value="">Choose a year...</option>
+                </select>
+            </div>
+            <div class="mb-6 flex gap-4">
+                <button type="button" class="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 smooth-transition" onclick="markYearPaid()">Mark Year as Paid</button>
+                <button type="button" class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 smooth-transition" onclick="markYearUnpaid()">Mark Year as Unpaid</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-6" id="duesPaymentGrid">
+                <!-- Monthly payment checkboxes will be generated here -->
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <button type="button" class="flex-1 px-6 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 smooth-transition" onclick="saveDuesPayments()">Save Payment History</button>
+                <button type="button" class="flex-1 px-6 py-2.5 bg-gray-400 text-white rounded-lg font-semibold hover:bg-gray-500 smooth-transition" onclick="closeDuesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// begin inline app.js
+// CFHM Management System - Main JavaScript Logic
+
+// In-app log capture: intercept console methods and store entries so user can download them
+window.appLogs = window.appLogs || [];
+(function() {
+    const methods = ['log', 'info', 'warn', 'error'];
+    methods.forEach(m => {
+        const orig = console[m] ? console[m].bind(console) : function(){};
+        console[m] = function(...args) {
+            try {
+                const textArgs = args.map(a => {
+                    try { return (typeof a === 'object') ? JSON.stringify(a) : String(a); } catch (e) { return String(a); }
+                });
+                window.appLogs.push({ time: new Date().toISOString(), level: m, message: textArgs.join(' ') });
+            } catch (e) {}
+            orig(...args);
+        };
+    });
+})();
+
+function downloadLogs() {
+    try {
+        const content = (window.appLogs || []).map(l => `${l.time} [${l.level}] ${l.message}`).join('\n');
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cfhm_logs_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'_')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        alert('Failed to download logs: ' + e.message);
+    }
+}
+
+class CFHMManager {
+    constructor() {
+        this.members = this.loadMembers();
+        this.editingId = null;
+        this.currentUser = this.loadCurrentUser();
+        this._miniChart = null;
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.setupLoginLogic();
+        this.renderMembers();
+        this.updateStatistics();
+        this.updateUserInfo();
+    }
+
+    setupLoginLogic() {
+        const loginScreen = document.getElementById('loginScreen');
+        const mainApp = document.getElementById('mainApp');
+        const loginForm = document.getElementById('loginForm');
+
+        // Always make sure app loads for demo users even if not logged in
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (loggedInUser) {
+            console.log('User already logged in');
+            try {
+                this.currentUser = JSON.parse(loggedInUser);
+                loginScreen.style.display = 'none';
+                mainApp.style.display = 'block';
+                this.updateUserInfo();
+            } catch (e) {
+                console.error('Failed to parse user data');
+            }
+        } else {
+            // provide automatic demo login so the interface is immediately usable
+            console.log('No logged in user, auto-login demo account');
+            this.currentUser = {
+                username: 'admin',
+                fullName: 'Admin User',
+                email: 'admin@cfhm.com',
+                phone: '+1-800-0000',
+                role: 'Administrator',
+                address: 'CFHM Headquarters',
+                joinDate: new Date().toLocaleDateString(),
+                password: 'admin123'
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(this.currentUser));
+            loginScreen.style.display = 'none';
+            mainApp.style.display = 'block';
+            this.updateUserInfo();
+        }
+
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+        }
+    }
+
+    handleLogin(e) {
+        e.preventDefault();
+        console.log('Login attempt');
+        
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        console.log('Username:', username, 'Password length:', password.length);
+
+        // Check default admin account
+        if (username === 'admin' && password === 'admin123') {
+            console.log('Admin login successful');
+            this.currentUser = {
+                username: 'admin',
+                fullName: 'Admin User',
+                email: 'admin@cfhm.com',
+                phone: '+1-800-0000',
+                role: 'Administrator',
+                address: 'CFHM Headquarters',
+                joinDate: new Date().toLocaleDateString(),
+                password: password
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(this.currentUser));
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            this.updateUserInfo();
+            console.log('Login complete');
+            return;
+        }
+
+        // Check registered users
+        const registeredUsers = JSON.parse(localStorage.getItem('cfhmUsers') || '[]');
+        console.log('Registered users:', registeredUsers.length);
+        const user = registeredUsers.find(u => u.username === username && u.password === password);
+
+        if (user) {
+            console.log('User login successful');
+            this.currentUser = user;
+            localStorage.setItem('loggedInUser', JSON.stringify(this.currentUser));
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            this.updateUserInfo();
+            console.log('Login complete');
+            return;
+        }
+
+        console.log('Invalid credentials');
+        alert('Invalid credentials. Please check your username and password.');
+    }
+
+    updateUserInfo() {
+        if (this.currentUser) {
+            const userDisplay = document.getElementById('loggedInUser');
+            if (userDisplay) {
+                userDisplay.textContent = `Welcome, ${this.currentUser.fullName || this.currentUser.username}`;
+            }
+        }
+    }
+
+    loadCurrentUser() {
+        const user = localStorage.getItem('loggedInUser');
+        return user ? JSON.parse(user) : null;
+    }
+
+    setupEventListeners() {
+        const form = document.getElementById('memberForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        }
+    }
+
+    handleFormSubmit(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('name').value.trim();
+        const location = document.getElementById('location').value.trim();
+        const contact = document.getElementById('contact').value.trim();
+        const attendance = parseInt(document.getElementById('attendance').value);
+        const duesStatus = document.getElementById('duesStatus').value;
+        const duesAmount = parseFloat(document.getElementById('duesAmount').value);
+
+        if (!name || !location || !contact || isNaN(attendance) || isNaN(duesAmount)) {
+            this.showToast('Please fill all fields correctly', '#c62828');
+            return;
+        }
+
+        if (this.editingId) {
+            // Update existing member
+            const member = this.members.find(m => m.id === this.editingId);
+            if (member) {
+                member.name = name;
+                member.location = location;
+                member.contact = contact;
+                member.attendance = attendance;
+                member.duesStatus = duesStatus;
+                member.duesAmount = duesAmount;
+                this.showToast('✓ Member updated successfully!', '#2e7d32');
+            }
+            this.editingId = null;
+        } else {
+            // Add new member
+            const newMember = {
+                id: Date.now(),
+                name,
+                location,
+                contact,
+                attendance,
+                duesStatus,
+                duesAmount,
+                dateAdded: new Date().toLocaleDateString()
+            };
+            this.members.push(newMember);
+            this.showToast('✓ Member added successfully!', '#2e7d32');
+        }
+
+        this.saveMembers();
+        this.renderMembers();
+        this.updateStatistics();
+        document.getElementById('memberForm').reset();
+        closeMemberModal();
+    }
+
+    showToast(message, bgColor) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.style.background = bgColor || '#2e7d32';
+        toast.style.display = 'block';
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.style.display = 'none', 300);
+        }, 2500);
+    }
+
+    renderMembers(membersToRender = null) {
+        const tbody = document.getElementById('membersBody');
+        const noMembersMsg = document.getElementById('noMembers');
+        const displayMembers = membersToRender || this.members;
+
+        tbody.innerHTML = '';
+
+        if (displayMembers.length === 0) {
+            noMembersMsg.style.display = 'block';
+            return;
+        }
+
+        noMembersMsg.style.display = 'none';
+
+        displayMembers.forEach(member => {
+            const duesHistory = this.loadDuesHistory(member.id);
+            const monthlyAmount = Number(member.duesAmount) || 0;
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            let totalPaid = 0;
+            for (let y = 2026; y <= currentYear; y++) {
+                const yData = duesHistory[y.toString()] || {};
+                const maxMonth = (y === currentYear) ? currentMonth : 12;
+                for (let m = 1; m <= maxMonth; m++) {
+                    const month = m.toString().padStart(2, '0');
+                    if (yData[month] === true) {
+                        totalPaid += monthlyAmount;
+                    }
+                }
+            }
+
+            const row = document.createElement('tr');
+            
+            // Color code based on dues status
+            let statusColor = 'border-l-4 border-gray-300 bg-gray-50 hover:bg-gray-100';
+            let badgeColor = 'bg-gray-100 text-gray-800';
+            
+            if (member.duesStatus === 'Paid') {
+                statusColor = 'border-l-4 border-green-500 hover:bg-green-50';
+                badgeColor = 'bg-green-100 text-green-800';
+            } else if (member.duesStatus === 'Pending') {
+                statusColor = 'border-l-4 border-yellow-500 hover:bg-yellow-50';
+                badgeColor = 'bg-yellow-100 text-yellow-800';
+            } else if (member.duesStatus === 'Overdue') {
+                statusColor = 'border-l-4 border-red-500 hover:bg-red-50';
+                badgeColor = 'bg-red-100 text-red-800';
+            }
+            
+            row.className = `${statusColor} smooth-transition`;
+            row.innerHTML = `
+                <td class="px-6 py-4 text-sm text-gray-700">${member.id}</td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">${member.name}</td>
+                <td class="px-6 py-4 text-sm text-gray-700">${member.location}</td>
+                <td class="px-6 py-4 text-sm text-gray-700">${member.contact}</td>
+                <td class="px-6 py-4 text-sm text-gray-700">GHS${monthlyAmount.toFixed(2)}</td>
+                <td class="px-6 py-4 text-sm text-gray-700">${member.attendance} days</td>
+                <td class="px-6 py-4 text-sm text-gray-700">GHS${totalPaid.toFixed(2)}</td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-sm font-medium ${badgeColor}">${member.duesStatus}</span></td>
+                <td class="px-6 py-4">
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-2">
+                            <button onclick="manager.viewDues(${member.id})" class="px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 smooth-transition">Dues</button>
+                            <button onclick="manager.editMember(${member.id})" class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 smooth-transition">Edit</button>
+                            <button onclick="manager.deleteMember(${member.id})" class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 smooth-transition">Delete</button>
+                        </div>
+                        <details class="mt-1">
+                            <summary class="text-blue-600 cursor-pointer text-xs">Details ▼</summary>
+                            <div class="mt-1 text-xs text-gray-700">
+                                Location: ${member.location}<br>
+                                Contact: ${member.contact}<br>
+                                Monthly: GHS${monthlyAmount.toFixed(2)}<br>
+                                Attendance: ${member.attendance} days
+                            </div>
+                        </details>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // remove any existing inline edit row
+    removeInlineEditor() {
+        const existing = document.querySelector('tr.inline-edit-row');
+        if (existing) existing.remove();
+    }
+
+    editMember(id) {
+        const member = this.members.find(m => m.id === id);
+        if (!member) return;
+
+        // if we already have this member open, just close it
+        const existing = document.getElementById('inline-edit-' + id);
+        if (existing) {
+            existing.remove();
+            return;
+        }
+
+        this.removeInlineEditor();
+
+        const rows = document.querySelectorAll('#membersBody tr');
+        let targetRow = null;
+        rows.forEach(row => {
+            if (row.firstElementChild && row.firstElementChild.textContent == id) {
+                targetRow = row;
+            }
+        });
+        if (!targetRow) return;
+
+        const formRow = document.createElement('tr');
+        formRow.className = 'inline-edit-row bg-gray-50';
+        formRow.id = 'inline-edit-' + id;
+        formRow.innerHTML = `
+            <td colspan="9" class="p-4">
+                <form id="inlineEditForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="editId" value="${id}">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+                        <input type="text" id="editName" value="${member.name}" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Location</label>
+                        <input type="text" id="editLocation" value="${member.location}" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Contact</label>
+                        <input type="tel" id="editContact" value="${member.contact}" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Attendance</label>
+                        <input type="number" id="editAttendance" value="${member.attendance}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Dues Status</label>
+                        <select id="editDuesStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                            <option ${member.duesStatus==='Paid'?'selected':''} value="Paid">Paid</option>
+                            <option ${member.duesStatus==='Pending'?'selected':''} value="Pending">Pending</option>
+                            <option ${member.duesStatus==='Overdue'?'selected':''} value="Overdue">Overdue</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Monthly Dues</label>
+                        <input type="number" id="editDuesAmount" value="${member.duesAmount}" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div class="col-span-full flex gap-4 pt-4">
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg">Save</button>
+                        <button type="button" id="cancelInlineEdit" class="px-6 py-2 bg-gray-400 text-white rounded-lg">Cancel</button>
+                    </div>
+                </form>
+            </td>
+        `;
+
+        targetRow.parentNode.insertBefore(formRow, targetRow.nextSibling);
+
+        document.getElementById('cancelInlineEdit').addEventListener('click', () => {
+            formRow.remove();
+        });
+
+        document.getElementById('inlineEditForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.applyInlineEdit();
+        });
+    }
+
+    applyInlineEdit() {
+        const id = parseInt(document.getElementById('editId').value, 10);
+        const member = this.members.find(m => m.id === id);
+        if (!member) return;
+        member.name = document.getElementById('editName').value.trim();
+        member.location = document.getElementById('editLocation').value.trim();
+        member.contact = document.getElementById('editContact').value.trim();
+        member.attendance = parseInt(document.getElementById('editAttendance').value);
+        member.duesStatus = document.getElementById('editDuesStatus').value;
+        member.duesAmount = parseFloat(document.getElementById('editDuesAmount').value);
+        this.saveMembers();
+        this.renderMembers();
+        this.updateStatistics();
+        this.showToast('✓ Member updated successfully!', '#2e7d32');
+        this.removeInlineEditor();
+    }
+
+    deleteMember(id) {
+        const member = this.members.find(m => m.id === id);
+        if (member) {
+            if (confirm(`Are you sure you want to delete ${member.name}?`)) {
+                this.members = this.members.filter(m => m.id !== id);
+                this.saveMembers();
+                this.renderMembers();
+                this.updateStatistics();
+                this.showToast('✓ Member deleted successfully!', '#2e7d32');
+            }
+        }
+    }
+
+    updateStatistics() {
+        const totalMembers = this.members.length;
+        const pendingDues = this.members.filter(m => m.duesStatus !== 'Paid').length;
+        const avgAttendance = totalMembers > 0 
+            ? Math.round(this.members.reduce((sum, m) => sum + m.attendance, 0) / totalMembers)
+            : 0;
+        const totalDuesOwed = this.members.reduce((sum, m) => {
+            const duesHistory = this.loadDuesHistory(m.id);
+            const monthlyAmount = Number(m.duesAmount) || 0;
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            let payable = 0;
+            for (let y = 2026; y <= currentYear; y++) {
+                const yData = duesHistory[y.toString()] || {};
+                const maxMonth = (y === currentYear) ? currentMonth : 12;
+                for (let mth = 1; mth <= maxMonth; mth++) {
+                    const month = mth.toString().padStart(2, '0');
+                    if (yData[month] !== true) {
+                        payable += monthlyAmount;
+                    }
+                }
+            }
+            return sum + payable;
+        }, 0);
+
+        document.getElementById('totalMembers').textContent = totalMembers;
+        document.getElementById('pendingDues').textContent = pendingDues;
+        document.getElementById('avgAttendance').textContent = avgAttendance;
+        document.getElementById('totalDuesOwed').textContent = 'GHS' + totalDuesOwed.toFixed(2);
+    }
+
+    saveMembers() {
+        localStorage.setItem('cfhmMembers', JSON.stringify(this.members));
+    }
+
+    loadMembers() {
+        const stored = localStorage.getItem('cfhmMembers');
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    viewDues(memberId) {
+        const member = this.members.find(m => m.id === memberId);
+        if (!member) return;
+
+        this.currentEditingMemberId = memberId;
+        document.getElementById('duesMemberName').textContent = member.name;
+
+        const duesHistory = this.loadDuesHistory(memberId);
+
+        const yearSelect = document.getElementById('duesYearSelect');
+        yearSelect.innerHTML = '<option value="">Choose a year...</option>';
+        for (let year = 2026; year <= new Date().getFullYear(); year++) {
+            yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+        }
+        yearSelect.value = new Date().getFullYear().toString();
+
+        this.renderDuesPaymentGrid(duesHistory);
+
+        document.getElementById('duesModal').classList.remove('hidden');
+    }
+
+    loadDuesHistory(memberId) {
+        const duesData = JSON.parse(localStorage.getItem('duesHistory') || '{}');
+        return duesData[memberId] || {};
+    }
+
+    renderDuesPaymentGrid(duesHistory) {
+        const grid = document.getElementById('duesPaymentGrid');
+        const year = document.getElementById('duesYearSelect').value;
+        grid.innerHTML = '';
+
+        if (!year) {
+            grid.innerHTML = '<p class="col-span-full text-gray-500">Please select a year</p>';
+            return;
+        }
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const yearKey = year;
+        const yearData = duesHistory[yearKey] || {};
+
+        months.forEach((month, index) => {
+            const monthNum = (index + 1).toString().padStart(2, '0');
+            const isPaid = yearData[monthNum] === true;
+
+            const label = document.createElement('label');
+            label.className = 'flex items-center space-x-2 p-3 border rounded-lg cursor:pointer hover:bg-blue-50 smooth-transition';
+            label.style.borderColor = isPaid ? '#10b981' : '#d1d5db';
+            label.style.backgroundColor = isPaid ? '#f0fdf4' : 'white';
+
+            label.innerHTML = `
+                <input type="checkbox" class="duesCheckbox" data-month="${monthNum}" ${isPaid ? 'checked' : ''}>
+                <span class="font-medium ${isPaid ? 'text-green-600' : 'text-gray-700'}">${month}</span>
+            `;
+            grid.appendChild(label);
+        });
+
+        // Add real-time update listeners
+        document.querySelectorAll('.duesCheckbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                this.updateMemberPaidAmount();
+            });
+        });
+    }
+
+    updateMemberPaidAmount() {
+        const member = this.members.find(m => m.id === this.currentEditingMemberId);
+        if (!member) return;
+
+        const duesHistory = this.loadDuesHistory(member.id);
+        const monthlyAmount = Number(member.duesAmount) || 0;
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+        const year = document.getElementById('duesYearSelect').value;
+
+        let totalPaid = 0;
+
+        // Add from saved history for other years
+        for (let y = 2026; y <= currentYear; y++) {
+            if (y == year) continue;
+            const yData = duesHistory[y.toString()] || {};
+            const maxMonth = (y === currentYear) ? currentMonth : 12;
+            for (let m = 1; m <= maxMonth; m++) {
+                const month = m.toString().padStart(2, '0');
+                if (yData[month] === true) {
+                    totalPaid += monthlyAmount;
+                }
+            }
+        }
+
+        // Add from current checkboxes
+        document.querySelectorAll('.duesCheckbox').forEach(cb => {
+            if (cb.checked) {
+                totalPaid += monthlyAmount;
+            }
+        });
+
+        // Update the td in the list
+        const rows = document.querySelectorAll('#membersTable tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells[0].textContent == member.id) {
+                cells[4].textContent = 'GHS' + totalPaid.toFixed(2);
+            }
+        });
+    }
+
+    markYearPaid() {
+        const year = document.getElementById('duesYearSelect').value;
+        if (!year) {
+            alert('Please select a year first');
+            return;
+        }
+        document.querySelectorAll('.duesCheckbox').forEach(checkbox => {
+            checkbox.checked = true;
+        });
+    }
+
+    markYearUnpaid() {
+        const year = document.getElementById('duesYearSelect').value;
+        if (!year) {
+            alert('Please select a year first');
+            return;
+        }
+        document.querySelectorAll('.duesCheckbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
+
+    saveDuesPayments() {
+        const year = document.getElementById('duesYearSelect').value;
+        if (!year || !this.currentEditingMemberId) {
+            alert('Please select a year');
+            return;
+        }
+
+        const duesHistory = this.loadDuesHistory(this.currentEditingMemberId);
+
+        if (!duesHistory[year]) {
+            duesHistory[year] = {};
+        }
+
+        document.querySelectorAll('.duesCheckbox').forEach(checkbox => {
+            const month = checkbox.getAttribute('data-month');
+            duesHistory[year][month] = checkbox.checked;
+        });
+
+        const allDuesData = JSON.parse(localStorage.getItem('duesHistory') || '{}');
+        allDuesData[this.currentEditingMemberId] = duesHistory;
+        localStorage.setItem('duesHistory', JSON.stringify(allDuesData));
+
+        // Update member status based on payment
+        const memberToUpdate = this.members.find(m => m.id === this.currentEditingMemberId);
+        if (memberToUpdate) {
+            let paidUpToYear = 2025;
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            for (let y = 2026; y <= currentYear; y++) {
+                const yData = duesHistory[y.toString()] || {};
+                const maxMonth = (y === currentYear) ? currentMonth : 12;
+                let yearFullyPaid = true;
+                for (let m = 1; m <= maxMonth; m++) {
+                    const month = m.toString().padStart(2, '0');
+                    if (yData[month] !== true) {
+                        yearFullyPaid = false;
+                        break;
+                    }
+                }
+                if (yearFullyPaid) {
+                    paidUpToYear = y;
+                } else {
+                    break;
+                }
+            }
+            memberToUpdate.duesStatus = (paidUpToYear === currentYear) ? 'Paid' : 'Pending';
+            this.saveMembers();
+            this.renderMembers(); // update the list
+            this.updateStatistics(); // update bottom stats
+        }
+        this.showToast('✓ Dues payment history saved!', '#2e7d32');
+        closeDuesModal();
+    }
+}
+
+// Global manager instance
+let manager;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    manager = new CFHMManager();
+});
+
+// Filter and search functions
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const filterStatus = document.getElementById('filterStatus').value;
+
+    const filtered = manager.members.filter(member => {
+        const matchesSearch = member.name.toLowerCase().includes(searchTerm) || 
+                            member.location.toLowerCase().includes(searchTerm);
+        const matchesStatus = !filterStatus || member.duesStatus === filterStatus;
+        return matchesSearch && matchesStatus;
+    });
+
+    manager.renderMembers(filtered);
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterStatus').value = '';
+    manager.renderMembers();
+}
+
+// Search in real-time as user types
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+});
+
+// Modal functions
+function closeModal() {
+    document.getElementById('actionModal').classList.add('hidden');
+}
+
+// Export data as CSV
+function exportToCSV() {
+    if (manager.members.length === 0) {
+        alert('No members to export');
+        return;
+    }
+    const csvContent = 'data:text/csv;charset=utf-8,' + 
+        'ID,Name,Location,Contact,Monthly Dues,Status,Date Added\n' +
+        manager.members.map(m => 
+            `${m.id},"${m.name}","${m.location}","${m.contact}",${m.duesAmount},${m.duesStatus},"${m.dateAdded}"`
+        ).join('\n');
+    
+    const link = document.createElement('a');
+    link.href = encodeURI(csvContent);
+    link.download = 'cfhm_members.csv';
+    link.click();
+}
+
+// Global modal functions
+function openAddMemberModal() {
+    document.getElementById('memberForm').reset();
+    document.getElementById('memberModalTitle').textContent = 'Add New Member';
+    manager.editingId = null;
+    document.getElementById('memberModal').classList.remove('hidden');
+}
+
+function closeMemberModal() {
+    document.getElementById('memberModal').classList.add('hidden');
+    document.getElementById('memberForm').reset();
+    manager.editingId = null;
+}
+
+function openUserProfile() {
+    const user = manager.currentUser;
+    document.getElementById('profileUsername').value = user?.username || '';
+    document.getElementById('profileFullName').value = user?.fullName || '';
+    document.getElementById('profileEmail').value = user?.email || '';
+    document.getElementById('profilePhone').value = user?.phone || '';
+    document.getElementById('profileRole').value = user?.role || '';
+    document.getElementById('profileJoinDate').value = user?.joinDate || '';
+    document.getElementById('profileAddress').value = user?.address || '';
+    document.getElementById('userProfileModal').classList.remove('hidden');
+}
+
+function closeUserProfile() {
+    document.getElementById('userProfileModal').classList.add('hidden');
+}
+
+function closeChangePassword() {
+    document.getElementById('changePasswordModal').classList.add('hidden');
+}
+
+function changePassword() {
+    document.getElementById('changePasswordModal').classList.remove('hidden');
+}
+
+function closeDuesModal() {
+    document.getElementById('duesModal').classList.add('hidden');
+}
+
+// Event listeners for forms
+document.addEventListener('DOMContentLoaded', () => {
+    const userProfileForm = document.getElementById('userProfileForm');
+    if (userProfileForm) {
+        userProfileForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = manager.currentUser;
+            if (user) {
+                user.fullName = document.getElementById('profileFullName').value;
+                user.email = document.getElementById('profileEmail').value;
+                user.phone = document.getElementById('profilePhone').value;
+                user.address = document.getElementById('profileAddress').value;
+                localStorage.setItem('loggedInUser', JSON.stringify(user));
+                manager.showToast('✓ Profile updated!', '#2e7d32');
+                closeUserProfile();
+            }
+        });
+    }
+
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const current = document.getElementById('currentPassword').value;
+            const newPwd = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+
+            const user = manager.currentUser;
+            if (user && user.password !== current) {
+                alert('Current password is incorrect');
+                return;
+            }
+            if (newPwd !== confirm) {
+                alert('Passwords do not match');
+                return;
+            }
+            if (newPwd.length < 5) {
+                alert('Password must be at least 5 characters');
+                return;
+            }
+            user.password = newPwd;
+            localStorage.setItem('loggedInUser', JSON.stringify(user));
+            manager.showToast('✓ Password changed!', '#2e7d32');
+            closeChangePassword();
+            changePasswordForm.reset();
+        });
+    }
+
+    const duesYearSelect = document.getElementById('duesYearSelect');
+    if (duesYearSelect) {
+        duesYearSelect.addEventListener('change', () => {
+            if (manager && manager.loadDuesHistory && manager.currentEditingMemberId) {
+                const duesHistory = manager.loadDuesHistory(manager.currentEditingMemberId);
+                manager.renderDuesPaymentGrid(duesHistory);
+            }
+        });
+    }
+});
+
+function logout() {
+    localStorage.removeItem('loggedInUser');
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('loginForm').reset();
+    manager.currentUser = null;
+}
+
+function markYearPaid() {
+    if (manager) manager.markYearPaid();
+}
+
+function markYearUnpaid() {
+    if (manager) manager.markYearUnpaid();
+}
+
+function saveDuesPayments() {
+    if (manager) manager.saveDuesPayments();
+}
+    </script>
+</body>
+</html>

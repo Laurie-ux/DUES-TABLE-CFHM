@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFHM Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-xl bg-white/95 p-8 shadow-2xl backdrop-blur-sm">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">CFHM Management</h1>
+            <p class="mt-2 text-sm text-gray-600">Please sign in to continue</p>
+        </div>
+
+        <form id="loginForm" class="space-y-5">
+            <div>
+                <label for="username" class="mb-2 block text-sm font-semibold text-gray-700">Username</label>
+                <input id="username" type="text" placeholder="Enter username" class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" required>
+            </div>
+
+            <div>
+                <label for="password" class="mb-2 block text-sm font-semibold text-gray-700">Password</label>
+                <input id="password" type="password" placeholder="Enter password" class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" required>
+            </div>
+
+            <button type="submit" class="w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700">LOGIN</button>
+        </form>
+
+        <div class="mt-6 text-center text-sm text-gray-600">
+            <p>Demo account: admin / admin123</p>
+            <p class="mt-3">User accounts can be created by an Administrator or Manager.</p>
+        </div>
+    </div>
+
+    <script>
+        const redirectToApp = () => {
+            window.location.href = 'index.html';
+        };
+
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (loggedInUser) {
+            redirectToApp();
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                alert('Please enter both a username and password.');
+                return;
+            }
+
+            const credentialsMatch = (username === 'admin' && password === 'admin123');
+            const registeredUsers = JSON.parse(localStorage.getItem('cfhmUsers') || '[]');
+            const registeredUser = registeredUsers.find(user => user.username === username && user.password === password);
+
+            if (!credentialsMatch && !registeredUser) {
+                alert('Invalid credentials. Please check your username and password.');
+                return;
+            }
+
+            const user = credentialsMatch ? {
+                username: 'admin',
+                fullName: 'Admin User',
+                email: 'admin@cfhm.com',
+                phone: '+1-800-0000',
+                role: 'Administrator',
+                address: 'CFHM Headquarters',
+                joinDate: new Date().toLocaleDateString(),
+                password: 'admin123'
+            } : registeredUser;
+
+            localStorage.setItem('loggedInUser', JSON.stringify(user));
+            redirectToApp();
+        });
+    </script>
+</body>
+</html>
