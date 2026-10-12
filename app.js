@@ -64,7 +64,7 @@ class CFHMManager {
 
         if (window.location.pathname.endsWith('login.html')) {
             if (localStorage.getItem('loggedInUser')) {
-                window.location.href = 'index.html';
+                window.location.href = 'index_clean.html';
                 return;
             }
 
@@ -130,7 +130,7 @@ class CFHMManager {
             if (mainApp) mainApp.style.display = 'block';
 
             this.updateUserInfo();
-            window.location.href = 'index.html';
+            window.location.href = 'index_clean.html';
             return;
         }
 
